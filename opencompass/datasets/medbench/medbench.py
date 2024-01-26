@@ -12,7 +12,7 @@ from .post_process import parse_math_answer, parse_qa_multiple_answer
 
 import evaluate
 from nltk.translate.bleu_score import sentence_bleu
-# from bert_score import score
+# # from bert_score import score
 import re
 from transformers import BasicTokenizer
 from rouge_chinese import Rouge
@@ -58,6 +58,8 @@ class MedBenchEvaluator(BaseEvaluator):
         return {'Accuracy': score, 'details': details}
 
 def process_generated_results_CMeEE(pred_file):
+    #   实体每类占一行，每行格式为 "[类型名称]实体：实体名称1，实体名称2，实体名称3\n"
+    #                多个实体，用 ，符号分割
     structured_output = []
     answer_choices = ['药物', '设备', '医院科室', '微生物类', '身体部位', '医疗操作', '医学检验项目', '症状', '疾病']
     for pred in pred_file:
@@ -517,7 +519,7 @@ class MedBenchEvaluator_CHIP_CTC(BaseEvaluator):
         return calc_scores_ctc(predictions, references)
 
 @ICL_EVALUATORS.register_module()
-class MedBenchEvaluator_SMDoc(BaseEvaluator):
+class MedBenchEvaluator_Doc_parsing(BaseEvaluator):
 
     def score(self, predictions, references):
         # predictions = process_generated_results_doc_parsing(predictions)
@@ -533,36 +535,23 @@ class MedBenchEvaluator_SMDoc(BaseEvaluator):
 class MedBenchEvaluator_NLG(BaseEvaluator):
 
     def score(self, predictions, references):
-        return calc_scores_nlg(references, predictions)
+        # predictions = process_generated_results_med(predictions)
+        return calc_scores_nlg(predictions, references)
 
 @ICL_EVALUATORS.register_module()
 class MedBenchEvaluator_Cloze(BaseEvaluator):
 
     def score(self, predictions, references):
-        erke_list = ["血管外科", "临床心理科", "生殖医学中心", "肿瘤科", "妇科", "小儿风湿免疫科", "放射科", "小儿内分泌代谢科", "急诊科", "心血管内科", "小儿神经内科", "感染科", "整形外科", "全科医学科", "泌尿外科", "皮肤科", "消化内科", "口腔科", "小儿心脏中心", "产科", "血液内科", "小儿普外科", "小儿泌尿外科", "小儿感染科", "临床营养科", "小儿骨科", "发育行为儿童保健科", "小儿呼吸内科", "神经外科", "内分泌代谢科", "普外科", "肛肠外科", "小儿神经外科", "康复医学科", "骨科", "风湿免疫科", "小儿内科", "眼科", "心胸外科", "小儿肾脏内科", "乳腺外科", "小儿血液肿瘤科", "体检中心", "神经内科", "耳鼻咽喉头颈外科", "小儿消化内科", "呼吸内科", "核医学科", "肾脏内科"]
-        no_erke_list = ["血管外科", "临床心理科", "生殖医学中心", "肿瘤科", "妇科", "放射科", "急诊科", "心血管内科", "感染科", "整形外科", "全科医学科", "泌尿外科", "皮肤科", "消化内科", "口腔科", "产科", "血液内科", "临床营养科", "神经外科", "内分泌代谢科", "普外科", "肛肠外科", "康复医学科", "骨科", "风湿免疫科", "眼科", "心胸外科", "乳腺外科", "体检中心", "神经内科", "耳鼻咽喉头颈外科", "呼吸内科", "核医学科", "肾脏内科"]
-        
-        cross_erke_list = [item for item in erke_list if '小儿' in item and item.replace('小儿', '') in no_erke_list]
-        cross_list = [item[2:] for item in cross_erke_list]
-
+        # predictions: [[]]
+        # references: [[]]
+        # predictions = [parse_qa_multiple_answer(pred) for pred in predictions]
         details = []
         cnt = 0
 
         for pred, ref in zip(predictions, references):
             detail = {'pred':pred, 'answer':ref, 'correct':False}
-            current_pred = []
-            for x in cross_list:
-                if '小儿' + x in predictions:
-                    current_pred.append('小儿' + x)
-                elif x in predictions:
-                    current_pred.append(x)
-
-            for x in (set(erke_list + no_erke_list) - set(cross_erke_list) - set(cross_list)):
-                if x in predictions:
-                    current_pred.append(x)
-
-            # if set([x for x in erke_list + no_erke_list if x in pred]) == set(ref):
-            if set(current_pred) == set(ref):
+            
+            if sum([item in pred for item in ref]) == len(ref):
                 cnt += 1
                 detail['correct'] = True
             details.append(detail)

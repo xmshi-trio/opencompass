@@ -143,6 +143,17 @@ def ds1000_postprocess(text: str) -> str:
     return text
 
 
+@TEXT_POSTPROCESSORS.register_module('ds1000_completion')
+def ds1000_completion_postprocess(text: str) -> str:
+    text += '</code>'
+
+    match = re.search('(.*?)</code>', text, re.DOTALL)
+    if match:
+        text = match.group(1)
+
+    return text
+
+
 @TEXT_POSTPROCESSORS.register_module('ds1000_matplotlib')
 def ds1000_matplotlib_postprocess(text: str) -> str:
     text = ds1000_postprocess(text)
@@ -354,7 +365,7 @@ class DS1000ServiceEvaluator(BaseEvaluator):
                  lib: str,
                  ip_address='localhost',
                  port=5000,
-                 timeout=180) -> None:
+                 timeout=600) -> None:
         assert lib in _LIBRARY_NAME_LIST, (
             f' lib must be in {_LIBRARY_NAME_LIST}')
         self.lib = lib
